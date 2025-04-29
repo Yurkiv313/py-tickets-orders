@@ -43,11 +43,6 @@ class CinemaHallViewSet(viewsets.ModelViewSet):
 
 class MovieViewSet(viewsets.ModelViewSet):
     queryset = Movie.objects.all()
-    serializer_class = MovieSerializer
-
-    @staticmethod
-    def _params_to_ints(query_string):
-        return [int(str_id) for str_id in query_string.split(",")]
 
     def get_queryset(self):
         queryset = self.queryset.prefetch_related("actors", "genres")
@@ -78,10 +73,13 @@ class MovieViewSet(viewsets.ModelViewSet):
 
         return MovieSerializer
 
+    @staticmethod
+    def _params_to_ints(query_string):
+        return [int(str_id) for str_id in query_string.split(",")]
+
 
 class MovieSessionViewSet(viewsets.ModelViewSet):
     queryset = MovieSession.objects.all()
-    serializer_class = MovieSessionSerializer
 
     def get_queryset(self):
         queryset = self.queryset.select_related("movie", "cinema_hall")
@@ -91,6 +89,15 @@ class MovieSessionViewSet(viewsets.ModelViewSet):
             queryset = self._annotate_queryset(queryset)
 
         return queryset.order_by("id")
+
+    def get_serializer_class(self):
+        if self.action == "list":
+            return MovieSessionListSerializer
+
+        if self.action == "retrieve":
+            return MovieSessionDetailSerializer
+
+        return MovieSessionSerializer
 
     def _filter_queryset(self, queryset):
         params = self.request.query_params
@@ -112,15 +119,6 @@ class MovieSessionViewSet(viewsets.ModelViewSet):
                 - Count("tickets", distinct=True)
             )
         )
-
-    def get_serializer_class(self):
-        if self.action == "list":
-            return MovieSessionListSerializer
-
-        if self.action == "retrieve":
-            return MovieSessionDetailSerializer
-
-        return MovieSessionSerializer
 
 
 class OrderPagination(PageNumberPagination):
@@ -144,10 +142,10 @@ class OrderViewSet(viewsets.ModelViewSet):
             )
         )
 
-    def perform_create(self, serializer):
-        serializer.save(user=self.request.user)
-
     def get_serializer_class(self):
         if self.action == "create":
             return OrderCreateSerializer
         return OrderSerializer
+
+    def perform_create(self, serializer):
+        serializer.save(user=self.request.user)

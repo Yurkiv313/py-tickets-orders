@@ -125,28 +125,19 @@ class TicketCreateSerializer(serializers.ModelSerializer):
     def validate(self, attrs):
         data = super().validate(attrs)
 
-        temp_ticket = Ticket(
+        if Ticket.objects.filter(
             movie_session=data["movie_session"],
             row=data["row"],
-            seat=data["seat"],
-            order=None
-        )
-
-        try:
-            temp_ticket.clean()
-        except ValidationError as e:
-            raise serializers.ValidationError(e.message_dict)
-
-        if Ticket.objects.filter(
-                movie_session=data["movie_session"],
-                row=data["row"],
-                seat=data["seat"]
+            seat=data["seat"]
         ).exists():
             raise serializers.ValidationError({
                 "seat": "This seat is already taken for this movie session."
             })
 
         return data
+
+    def create(self, validated_data):
+        return Ticket.objects.create(**validated_data)
 
 
 class OrderCreateSerializer(serializers.ModelSerializer):
